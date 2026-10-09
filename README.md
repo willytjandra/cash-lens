@@ -28,6 +28,8 @@ The focus is on pragmatic, freelancer-friendly application development rather th
 - Tailwind CSS
 - Supabase
 - PostgreSQL
+- Zod
+- React Hook Form
 - pnpm
 - Vercel
 
@@ -72,7 +74,16 @@ Required variables:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+NEXT_PUBLIC_SITE_URL=
 ```
+
+For local development:
+
+```env
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
+
+The deployed application uses its Vercel URL for `NEXT_PUBLIC_SITE_URL`.
 
 `.env.local` is not committed to source control.
 
@@ -86,30 +97,79 @@ https://cash-lens-eta.vercel.app/
 
 For the current development phase, CashLens uses the existing `document-hub-staging` Supabase project as a shared development backend. This is a temporary pragmatic setup while working within the current Supabase project limit.
 
+Because Supabase Auth configuration is project-wide, CashLens explicitly provides its email confirmation redirect URL rather than relying on the shared project's default Site URL.
+
+When CashLens becomes substantial enough to require isolated infrastructure, the intended environment structure is:
+
+```text
+cash-lens-staging
+    ↓
+local development / testing
+
+cash-lens
+    ↓
+production
+```
+
 ## Documentation
 
 ### Learning journey
 
-CashLens is being built incrementally through practical vertical slices. Each guide documents the decisions, implementation steps, and key learning from that milestone:
+CashLens is being built incrementally through practical vertical slices. Each guide documents the decisions, implementation steps, problems encountered, and key learning from that milestone.
 
-1. [Project Foundation](docs/learning/01-project-foundation.md)
+1. [Slice 1 — Project Foundation](docs/learning/01-project-foundation.md)
+2. [Slice 2 — Authentication](docs/learning/02-authentication.md)
 
-More guides will be added as the project progresses.
+### Coding standards
+
+Project conventions are recorded in:
+
+[CODING_STANDARDS.md](CODING_STANDARDS.md)
+
+The standards are intentionally developed alongside the application rather than creating a large rulebook upfront. Conventions are added when the project encounters a real need for consistency, maintainability, or clearer testing boundaries.
 
 ## Project Status
 
-### Slice 1 — Project Foundation
+CashLens currently has:
 
-The initial project foundation includes:
+- a deployed Next.js + Supabase foundation
+- complete Supabase authentication
+- signup with client and server validation
+- email confirmation and callback handling
+- protected authenticated routes
+- sign in and sign out
+- production build validation through `pnpm build:prod`
 
-- Next.js + TypeScript
-- pnpm
-- Tailwind CSS
-- GitHub repository
-- Supabase browser and server client configuration
-- environment variable template
-- production build gate
-- basic CashLens landing page
-- Vercel deployment baseline
+The application is deployed at:
+
+https://cash-lens-eta.vercel.app/
+
+### Next
+
+The next slice will begin the QuickBooks integration, starting with the OAuth connection flow between a CashLens user and a QuickBooks company.
+
+Detailed implementation notes and learning history are available in the [learning documentation](docs/learning/).
+
+## Current Application Flow
+
+```text
+Unauthenticated
+    |
+    |-- /signup
+    |      `-- create account + confirm email
+    |
+    `-- /login
+           `-- authenticate
+                  |
+                  v
+             /dashboard
+                  |
+                  `-- sign out
+                         |
+                         v
+                      /login
+```
+
+The dashboard is currently intentionally minimal. Future slices will introduce the QuickBooks integration and financial dashboard functionality.
 
 Development will continue through small vertical slices, with each slice adding a working piece of functionality and documenting the key learning along the way.
