@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 import { signUpSchema } from "./sign-up.schema";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export type SignUpState =
   | {
@@ -46,7 +47,7 @@ export const signUp = async (
 
   const supabase = await createClient();
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -66,6 +67,42 @@ export const signUp = async (
       },
     };
   }
+
+  const user = data.user;
+
+  if (!user) {
+    return {
+      success: false,
+      errors: {
+          form: ['unable to create user'],
+        },
+    };
+  }
+
+  const admin = createAdminClient();
+
+  const { error: profileError } = await admin
+    .schema("cashlens")
+    .from("profiles")
+    .insert({
+      auth_user_id: user.id,
+      first_name: firstName,
+      last_name: lastName,
+    });
+
+    if (profileError) {
+      await admin.auth.admin.deleteUser(user.id);
+
+      console.error("Failed to create CashLens profile", profileError);
+
+      return {
+        success: false,
+        errors: {
+            form: ['unable to create user profile'],
+          },
+      };
+    }
+
 
   redirect("/signup/confirmation");
 };
