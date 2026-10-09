@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 import { PropsWithChildren } from "react";
+import { connection } from "next/server";
 
 // This authenticated route depends on request-time cookies for the Supabase session.
 // With Next.js Cache Components enabled, make the whole route blocking instead of
@@ -9,6 +10,8 @@ import { PropsWithChildren } from "react";
 export const instant = false;
 
 const AuthenticatedLayout = async ({ children }: PropsWithChildren) => {
+  await connection();
+
   const supabase = await createClient();
 
   const {

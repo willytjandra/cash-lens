@@ -8,6 +8,10 @@ type LoginPageProps = {
   }>;
 };
 
+// Login reads request-time searchParams, so render this route at request time.
+// This avoids Instant Navigation validation issues with Cache Components enabled.
+export const instant = false;
+
 const LoginPage = async ({ searchParams }: LoginPageProps) => {
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
