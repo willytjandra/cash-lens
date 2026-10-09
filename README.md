@@ -74,18 +74,98 @@ Required variables:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
-NEXT_PUBLIC_SITE_URL=
 ```
-
-For local development:
-
-```env
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
-```
-
-The deployed application uses its Vercel URL for `NEXT_PUBLIC_SITE_URL`.
 
 `.env.local` is not committed to source control.
+
+## Supabase Environments
+
+CashLens currently uses shared Supabase environments with other portfolio applications:
+
+```text
+portfolio-staging
+portfolio-prod
+```
+
+This shared setup exists to reduce infrastructure cost while building and learning.
+
+It is a deliberate portfolio-environment compromise rather than the recommended architecture for a real production application.
+
+In a real production system, CashLens would normally use dedicated Supabase projects per environment, for example:
+
+```text
+cashlens-staging
+cashlens-prod
+```
+
+The shared environments contain application-specific database namespaces so unrelated applications can keep their database objects clearly separated.
+
+CashLens application-owned database objects use the `cashlens` PostgreSQL schema.
+
+## Database Migrations
+
+Database migrations are **not managed from this repository**.
+
+Because multiple portfolio applications currently share the same physical Supabase projects, migration history is managed centrally in the private `portfolio-supabase` repository.
+
+This avoids migration-history drift between applications sharing the same Supabase database.
+
+If a CashLens change requires any persistent database change, including:
+
+- schemas
+- tables
+- columns
+- indexes
+- constraints
+- enums
+- grants
+- Row Level Security
+- RLS policies
+- database functions
+- triggers
+
+make the corresponding change as a migration in `portfolio-supabase`.
+
+Follow the database migration runbook in that repository for the deployment workflow:
+
+```text
+create migration
+        |
+        v
+apply to portfolio-staging
+        |
+        v
+verify
+        |
+        v
+review / commit
+        |
+        v
+apply to portfolio-prod
+        |
+        v
+verify
+```
+
+Persistent database changes should not be made manually through the Supabase Dashboard.
+
+The Dashboard may still be used for inspection and troubleshooting.
+
+## Database Security
+
+Using an application-specific PostgreSQL schema provides an ownership and organisation boundary, but it does not replace application security.
+
+CashLens database tables should still use appropriate:
+
+- PostgreSQL grants
+- Row Level Security
+- RLS policies
+- foreign-key constraints
+- least-privilege access
+
+Normal application access should use authenticated Supabase sessions and RLS.
+
+Privileged Supabase service-role access should only be used from trusted server-side code for operations that genuinely require elevated access.
 
 ## Deployment
 
@@ -95,81 +175,88 @@ Live application:
 
 https://cash-lens-eta.vercel.app/
 
-For the current development phase, CashLens uses the existing `document-hub-staging` Supabase project as a shared development backend. This is a temporary pragmatic setup while working within the current Supabase project limit.
+Local development uses `portfolio-staging`.
 
-Because Supabase Auth configuration is project-wide, CashLens explicitly provides its email confirmation redirect URL rather than relying on the shared project's default Site URL.
-
-When CashLens becomes substantial enough to require isolated infrastructure, the intended environment structure is:
-
-```text
-cash-lens-staging
-    ↓
-local development / testing
-
-cash-lens
-    ↓
-production
-```
+Production deployments use `portfolio-prod`.
 
 ## Documentation
 
 ### Learning journey
 
-CashLens is being built incrementally through practical vertical slices. Each guide documents the decisions, implementation steps, problems encountered, and key learning from that milestone.
+CashLens is being built incrementally through practical vertical slices. Each guide documents the decisions, implementation steps, and key learning from that milestone:
 
-1. [Slice 1 — Project Foundation](docs/learning/01-project-foundation.md)
-2. [Slice 2 — Authentication](docs/learning/02-authentication.md)
+1. [Project Foundation](docs/learning/01-project-foundation.md)
+2. [Authentication](docs/learning/02-authentication.md)
+
+Additional learning guides will be added as the project progresses.
 
 ### Coding standards
 
-Project conventions are recorded in:
+Project coding conventions are documented in:
 
-[CODING_STANDARDS.md](CODING_STANDARDS.md)
-
-The standards are intentionally developed alongside the application rather than creating a large rulebook upfront. Conventions are added when the project encounters a real need for consistency, maintainability, or clearer testing boundaries.
+```text
+CODING_STANDARDS.md
+```
 
 ## Project Status
 
-CashLens currently has:
+### Slice 1 — Project Foundation
 
-- a deployed Next.js + Supabase foundation
-- complete Supabase authentication
-- signup with client and server validation
-- email confirmation and callback handling
+Completed:
+
+- Next.js App Router
+- TypeScript
+- React
+- Tailwind CSS
+- pnpm
+- Supabase browser and server clients
+- environment configuration
+- production build gate
+- Vercel deployment
+
+### Slice 2 — Authentication
+
+Completed:
+
+- signup
+- shared Zod client/server validation
+- React Hook Form
+- Supabase email confirmation
+- explicit auth callback
+- `exchangeCodeForSession`
+- login
 - protected authenticated routes
-- sign in and sign out
-- production build validation through `pnpm build:prod`
+- sign out
+- Next.js Cache Components learnings
+- coding standards
 
-The application is deployed at:
+### Slice 3a — Application User Profile
 
-https://cash-lens-eta.vercel.app/
+In progress.
 
-### Next
+This slice introduces CashLens-owned application user records separately from Supabase Auth.
 
-The next slice will begin the QuickBooks integration, starting with the OAuth connection flow between a CashLens user and a QuickBooks company.
-
-Detailed implementation notes and learning history are available in the [learning documentation](docs/learning/).
-
-## Current Application Flow
+The initial model includes:
 
 ```text
-Unauthenticated
+Supabase Auth
     |
-    |-- /signup
-    |      `-- create account + confirm email
+    | auth identity
+    v
+cashlens.profiles
     |
-    `-- /login
-           `-- authenticate
-                  |
-                  v
-             /dashboard
-                  |
-                  `-- sign out
-                         |
-                         v
-                      /login
+    | CashLens internal user ID
+    | first name
+    | last name
+    | application lifecycle status
+    v
+future CashLens domain data
 ```
 
-The dashboard is currently intentionally minimal. Future slices will introduce the QuickBooks integration and financial dashboard functionality.
+Database migrations for this slice are managed through `portfolio-supabase`.
+
+### Slice 3b — QuickBooks OAuth
+
+Planned after Slice 3a.
 
 Development will continue through small vertical slices, with each slice adding a working piece of functionality and documenting the key learning along the way.
