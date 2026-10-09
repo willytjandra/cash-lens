@@ -151,6 +151,24 @@ Persistent database changes should not be made manually through the Supabase Das
 
 The Dashboard may still be used for inspection and troubleshooting.
 
+## Database Types
+
+CashLens uses generated Supabase TypeScript definitions for type-safe database access.
+
+The generated types live at:
+
+```text
+src/types/database.types.ts
+```
+
+They are generated from the `cashlens` schema in `portfolio-staging` and are used by the browser, server, and admin Supabase clients.
+
+Database type generation is managed from the private `portfolio-supabase` repository.
+
+After a database migration changes the application database contract, regenerate the CashLens types from that repository and commit the updated `database.types.ts` file here.
+
+See the database migration runbook in `portfolio-supabase` for the exact workflow.
+
 ## Database Security
 
 Using an application-specific PostgreSQL schema provides an ownership and organisation boundary, but it does not replace application security.
