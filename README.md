@@ -74,6 +74,7 @@ Required variables:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_SECRET_KEY=
 ```
 
 `.env.local` is not committed to source control.
@@ -195,7 +196,9 @@ https://cash-lens-eta.vercel.app/
 
 Local development uses `portfolio-staging`.
 
-Production deployments use `portfolio-prod`.
+The deployed portfolio application currently also uses `portfolio-staging` while active development is ongoing.
+
+Once CashLens reaches a demo-ready milestone, the deployed application will be switched to `portfolio-prod`.
 
 ## Documentation
 
@@ -205,6 +208,7 @@ CashLens is being built incrementally through practical vertical slices. Each gu
 
 1. [Project Foundation](docs/learning/01-project-foundation.md)
 2. [Authentication](docs/learning/02-authentication.md)
+3. [Application User Profile](docs/learning/03a-application-user-profile.md)
 
 Additional learning guides will be added as the project progresses.
 
@@ -218,63 +222,36 @@ CODING_STANDARDS.md
 
 ## Project Status
 
-### Slice 1 — Project Foundation
-
-Completed:
-
-- Next.js App Router
-- TypeScript
-- React
-- Tailwind CSS
-- pnpm
-- Supabase browser and server clients
-- environment configuration
-- production build gate
-- Vercel deployment
-
-### Slice 2 — Authentication
-
-Completed:
-
-- signup
-- shared Zod client/server validation
-- React Hook Form
-- Supabase email confirmation
-- explicit auth callback
-- `exchangeCodeForSession`
-- login
-- protected authenticated routes
-- sign out
-- Next.js Cache Components learnings
-- coding standards
-
-### Slice 3a — Application User Profile
-
-In progress.
-
-This slice introduces CashLens-owned application user records separately from Supabase Auth.
-
-The initial model includes:
+Completed so far:
 
 ```text
-Supabase Auth
-    |
-    | auth identity
-    v
-cashlens.profiles
-    |
-    | CashLens internal user ID
-    | first name
-    | last name
-    | application lifecycle status
-    v
-future CashLens domain data
+Slice 1
+Project Foundation
+        |
+        v
+Slice 2
+Authentication
+        |
+        v
+Slice 3a
+Application User Profile
 ```
 
-Database migrations for this slice are managed through `portfolio-supabase`.
+CashLens currently has:
 
-### Slice 3b — QuickBooks OAuth
+- Next.js and Supabase application foundations
+- Supabase authentication and email confirmation
+- protected authenticated application routes
+- CashLens-owned application user profiles
+- profile provisioning and activation
+- generated type-safe Supabase database access
+- authenticated current-user loading
+- editable user profiles with React Hook Form and Zod validation
 
-Planned after Slice 3a.
+The next milestone is:
 
-Development will continue through small vertical slices, with each slice adding a working piece of functionality and documenting the key learning along the way.
+```text
+Slice 3b — QuickBooks OAuth
+```
+
+Future slices will build toward QuickBooks integration, financial synchronisation, background processing, scheduled jobs, reliability patterns, and financial dashboards.
