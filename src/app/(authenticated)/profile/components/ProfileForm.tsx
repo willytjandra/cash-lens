@@ -1,7 +1,10 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useActionState } from "react";
+import { useForm } from "react-hook-form";
 
+import { profileSchema, type ProfileFormValues } from "../profile.schema";
 import {
   updateProfile,
   type ProfileActionState,
@@ -18,14 +21,39 @@ const initialState: ProfileActionState = {
   message: "",
 };
 
-const ProfileForm = ({ email, firstName, lastName }: ProfileFormProps) => {
+export const ProfileForm = ({
+  email,
+  firstName,
+  lastName,
+}: ProfileFormProps) => {
   const [state, formAction, pending] = useActionState(
     updateProfile,
     initialState,
   );
 
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      firstName,
+      lastName,
+    },
+  });
+
+  const onSubmit = handleSubmit((values) => {
+    const formData = new FormData();
+
+    formData.set("firstName", values.firstName);
+    formData.set("lastName", values.lastName);
+
+    formAction(formData);
+  });
+
   return (
-    <form action={formAction} className="space-y-4">
+    <form onSubmit={onSubmit} className="space-y-4">
       <div>
         <label htmlFor="email" className="block text-sm font-medium">
           Email
@@ -47,18 +75,14 @@ const ProfileForm = ({ email, firstName, lastName }: ProfileFormProps) => {
 
         <input
           id="firstName"
-          name="firstName"
           type="text"
-          defaultValue={firstName}
+          {...register("firstName")}
           className="mt-1 w-full rounded border px-3 py-2"
         />
 
-        {state.status === "error" &&
-          state.fieldErrors?.firstName?.map((error) => (
-            <p key={error} className="mt-1 text-sm">
-              {error}
-            </p>
-          ))}
+        {errors.firstName && (
+          <p className="mt-1 text-sm">{errors.firstName.message}</p>
+        )}
       </div>
 
       <div>
@@ -68,18 +92,14 @@ const ProfileForm = ({ email, firstName, lastName }: ProfileFormProps) => {
 
         <input
           id="lastName"
-          name="lastName"
           type="text"
-          defaultValue={lastName}
+          {...register("lastName")}
           className="mt-1 w-full rounded border px-3 py-2"
         />
 
-        {state.status === "error" &&
-          state.fieldErrors?.lastName?.map((error) => (
-            <p key={error} className="mt-1 text-sm">
-              {error}
-            </p>
-          ))}
+        {errors.lastName && (
+          <p className="mt-1 text-sm">{errors.lastName.message}</p>
+        )}
       </div>
 
       {state.message && <p className="text-sm">{state.message}</p>}
@@ -94,5 +114,3 @@ const ProfileForm = ({ email, firstName, lastName }: ProfileFormProps) => {
     </form>
   );
 };
-
-export default ProfileForm;
