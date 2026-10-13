@@ -14,6 +14,97 @@ export type Database = {
   }
   cashlens: {
     Tables: {
+      accounting_connection_credentials: {
+        Row: {
+          access_token_expires_at: string
+          access_token_secret_id: string
+          accounting_connection_id: string
+          created_at: string
+          refresh_token_expires_at: string
+          refresh_token_secret_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          access_token_expires_at: string
+          access_token_secret_id: string
+          accounting_connection_id: string
+          created_at?: string
+          refresh_token_expires_at: string
+          refresh_token_secret_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          access_token_expires_at?: string
+          access_token_secret_id?: string
+          accounting_connection_id?: string
+          created_at?: string
+          refresh_token_expires_at?: string
+          refresh_token_secret_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounting_connection_credentials_accounting_connection_id_fkey"
+            columns: ["accounting_connection_id"]
+            isOneToOne: true
+            referencedRelation: "accounting_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accounting_connections: {
+        Row: {
+          company_name: string
+          country: string | null
+          created_at: string
+          currency: string | null
+          external_id: string
+          id: string
+          profile_id: string
+          provider: Database["cashlens"]["Enums"]["accounting_provider"]
+          scopes: string[]
+          status: Database["cashlens"]["Enums"]["accounting_connection_status"]
+          updated_at: string
+        }
+        Insert: {
+          company_name: string
+          country?: string | null
+          created_at?: string
+          currency?: string | null
+          external_id: string
+          id?: string
+          profile_id: string
+          provider: Database["cashlens"]["Enums"]["accounting_provider"]
+          scopes: string[]
+          status: Database["cashlens"]["Enums"]["accounting_connection_status"]
+          updated_at?: string
+        }
+        Update: {
+          company_name?: string
+          country?: string | null
+          created_at?: string
+          currency?: string | null
+          external_id?: string
+          id?: string
+          profile_id?: string
+          provider?: Database["cashlens"]["Enums"]["accounting_provider"]
+          scopes?: string[]
+          status?: Database["cashlens"]["Enums"]["accounting_connection_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounting_connections_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           auth_user_id: string
@@ -52,6 +143,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      accounting_connection_status: "CONNECTED" | "DISCONNECTED"
+      accounting_provider: "QUICKBOOKS"
       profile_status: "PENDING" | "ACTIVE"
     }
     CompositeTypes: {
@@ -180,6 +273,8 @@ export type CompositeTypes<
 export const Constants = {
   cashlens: {
     Enums: {
+      accounting_connection_status: ["CONNECTED", "DISCONNECTED"],
+      accounting_provider: ["QUICKBOOKS"],
       profile_status: ["PENDING", "ACTIVE"],
     },
   },
