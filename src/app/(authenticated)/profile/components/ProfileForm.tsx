@@ -21,11 +21,7 @@ const initialState: ProfileActionState = {
   message: "",
 };
 
-export const ProfileForm = ({
-  email,
-  firstName,
-  lastName,
-}: ProfileFormProps) => {
+const ProfileForm = ({ email, firstName, lastName }: ProfileFormProps) => {
   const [state, formAction, pending] = useActionState(
     updateProfile,
     initialState,
@@ -114,3 +110,5 @@ export const ProfileForm = ({
     </form>
   );
 };
+
+export default ProfileForm;
