@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 
 import { signUpSchema } from "./sign-up.schema";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { clientEnv } from "@/lib/env/clientEnv";
 
 export type SignUpState =
   | {
@@ -47,6 +48,8 @@ export const signUp = async (
 
   const supabase = await createClient();
 
+  const { NEXT_PUBLIC_SITE_URL } = clientEnv;
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -55,7 +58,7 @@ export const signUp = async (
         first_name: firstName,
         last_name: lastName,
       },
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+      emailRedirectTo: `${NEXT_PUBLIC_SITE_URL}/auth/callback`,
     },
   });
 

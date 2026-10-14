@@ -179,6 +179,62 @@ type SignUpState =
 
 This is preferred over a collection of unrelated optional properties because the state contract is explicit.
 
+## 9. Environment Variables
+
+Access environment variables only through typed modules under:
+
+```text
+src/lib/env/
+├── clientEnv.ts
+└── serverEnv.ts
+```
+
+Use `clientEnv` for `NEXT_PUBLIC_*` variables that are safe to expose to the browser.
+
+Use `serverEnv` for server-only variables and secrets.
+
+`serverEnv.ts` must import:
+
+```ts
+import "server-only";
+```
+
+This prevents server-only configuration from being imported into Client Components.
+
+Required environment variables must be validated with Zod and should fail fast when missing or invalid.
+
+Application code should not access `process.env` directly outside the environment modules, except for narrow framework-provided exceptions where justified.
+
+Example server usage:
+
+```ts
+import { serverEnv } from "@/lib/env/serverEnv";
+
+const clientId = serverEnv.QUICKBOOKS_CLIENT_ID;
+```
+
+Example client usage:
+
+```ts
+import { clientEnv } from "@/lib/env/clientEnv";
+
+const supabaseUrl = clientEnv.NEXT_PUBLIC_SUPABASE_URL;
+```
+
+Even though Next.js loads public and private configuration from the same `.env.*` files, CashLens treats them as separate configuration boundaries:
+
+```text
+.env.*
+   |
+   +-- clientEnv
+   |     └-- browser-safe NEXT_PUBLIC_* values
+   |
+   └-- serverEnv
+         └-- private server configuration and secrets
+```
+
+This keeps configuration strongly typed, preserves the client/server security boundary, and catches missing configuration during development or build rather than at runtime.
+
 ## Philosophy
 
 CashLens conventions should remain pragmatic.
