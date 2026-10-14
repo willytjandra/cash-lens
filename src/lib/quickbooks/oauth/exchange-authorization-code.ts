@@ -17,10 +17,10 @@ const tokenResponseSchema = z.object({
 
 export type QuickBooksTokenResponse = z.infer<typeof tokenResponseSchema>;
 
-export const exchangeAuthorizationCode = async (
+export const exchangeAuthorizationCode = async ({ code, redirectUri }: {
   code: string,
   redirectUri: string,
-): Promise<QuickBooksTokenResponse> => {
+}): Promise<QuickBooksTokenResponse> => {
   const basicAuth = Buffer.from(
     `${serverEnv.QUICKBOOKS_CLIENT_ID}:${serverEnv.QUICKBOOKS_CLIENT_SECRET}`,
   ).toString("base64");

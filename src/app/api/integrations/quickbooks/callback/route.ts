@@ -1,9 +1,11 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
+import { createAccountingConnection } from "@/lib/accounting-connections";
+import { getCurrentUser } from "@/lib/auth/";
 import { serverEnv } from "@/lib/env/serverEnv";
-import { exchangeAuthorizationCode } from "@/lib/quickbooks/oauth";
 import { getCompanyInfo } from "@/lib/quickbooks/company-info";
+import { exchangeAuthorizationCode } from "@/lib/quickbooks/oauth";
 
 const QUICKBOOKS_CALLBACK_PATH =
   "/api/integrations/quickbooks/callback";
@@ -24,10 +26,10 @@ export async function GET(request: NextRequest) {
 
   cookieStore.delete("quickbooks_oauth_state");
 
-  if (error) {
+  if (!state || !expectedState || state !== expectedState) {
     return NextResponse.json(
       {
-        error,
+        error: "Invalid OAuth state",
       },
       {
         status: 400,
@@ -35,10 +37,10 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  if (!state || !expectedState || state !== expectedState) {
+  if (error) {
     return NextResponse.json(
       {
-        error: "Invalid OAuth state",
+        error,
       },
       {
         status: 400,
@@ -57,13 +59,21 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const profile = await getCurrentUser();
+
+  if (!profile) {
+    return NextResponse.redirect(
+      new URL("/login", serverEnv.APP_BASE_URL),
+    );
+  }
+
   const redirectUri =
     `${serverEnv.APP_BASE_URL}${QUICKBOOKS_CALLBACK_PATH}`;
 
-  const tokens = await exchangeAuthorizationCode(
+  const tokens = await exchangeAuthorizationCode({
     code,
     redirectUri,
-  );
+  });
 
   const companyInfo = await getCompanyInfo({
     realmId,
@@ -73,12 +83,34 @@ export async function GET(request: NextRequest) {
     },
   });
 
-  return NextResponse.json({
-    success: true,
-    realmId,
+  const now = Date.now();
+
+  await createAccountingConnection({
+    profileId: profile.id,
+    provider: "QUICKBOOKS",
+    externalId: realmId,
     companyName: companyInfo.CompanyName,
-    country: companyInfo.Country ?? null,
-    accessTokenReceived: true,
-    refreshTokenReceived: true,
+    country: companyInfo.Country,
+    currency: undefined,
+    scopes: [
+      "com.intuit.quickbooks.accounting",
+    ],
+    credentials: {
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+      accessTokenExpiresAt: new Date(
+        now + tokens.expires_in * 1000,
+      ),
+      refreshTokenExpiresAt: new Date(
+        now + tokens.x_refresh_token_expires_in * 1000,
+      ),
+    },
   });
+
+  return NextResponse.redirect(
+    new URL(
+      "/integrations?quickbooks=connected",
+      serverEnv.APP_BASE_URL,
+    ),
+  );
 }

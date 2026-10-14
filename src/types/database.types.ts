@@ -140,7 +140,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_accounting_connection: {
+        Args: {
+          p_access_token: string
+          p_access_token_expires_at: string
+          p_company_name: string
+          p_country?: string
+          p_currency?: string
+          p_external_id: string
+          p_profile_id: string
+          p_provider: Database["cashlens"]["Enums"]["accounting_provider"]
+          p_refresh_token: string
+          p_refresh_token_expires_at: string
+          p_scopes: string[]
+        }
+        Returns: string
+      }
     }
     Enums: {
       accounting_connection_status: "CONNECTED" | "DISCONNECTED"
