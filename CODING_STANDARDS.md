@@ -16,7 +16,7 @@ Examples:
 sign-in.action.ts
 sign-up.action.ts
 sign-out.action.ts
-connect-quickbooks.action.ts
+disconnect-quickbooks.action.ts
 ```
 
 The exported function uses normal camelCase naming:
@@ -301,6 +301,7 @@ Example:
 src/lib/quickbooks/
 ├── oauth/
 │   ├── exchange-authorization-code.ts
+│   ├── revoke-token.ts
 │   ├── refresh-access-token.ts
 │   └── index.ts
 ├── company-info/
@@ -325,6 +326,7 @@ Examples:
 
 ```text
 exchange-authorization-code.ts
+revoke-token.ts
 get-company-info.ts
 create-invoice.ts
 get-profit-and-loss.ts
@@ -368,12 +370,14 @@ export {
   exchangeAuthorizationCode,
   type TokenResponse,
 } from "./exchange-authorization-code";
+
+export { revokeToken } from "./revoke-token";
 ```
 
 Consumers should import from the module boundary where practical:
 
 ```ts
-import { exchangeAuthorizationCode } from "@/lib/quickbooks/oauth";
+import { exchangeAuthorizationCode, revokeToken } from "@/lib/quickbooks/oauth";
 ```
 
 rather than using deep imports:
@@ -455,6 +459,125 @@ const companyInfoResponseSchema = z.object({
 If CashLens later needs additional fields, add them deliberately when there is a concrete use case.
 
 This reduces coupling to the provider and avoids breaking CashLens because of irrelevant changes in unused external fields.
+
+## 13. Database Function Boundaries
+
+Prefer application code for business logic unless PostgreSQL provides a concrete advantage.
+
+Database functions are appropriate when a use case genuinely requires capabilities such as:
+
+- transactional atomicity across several database operations
+- controlled access to Supabase-managed schemas such as Vault
+- tightly scoped privileged database operations
+
+Example:
+
+```text
+create_accounting_connection
+```
+
+uses a PostgreSQL function because the following operations must succeed or fail together:
+
+```text
+insert connection
+        ↓
+create access-token Vault secret
+        ↓
+create refresh-token Vault secret
+        ↓
+insert credentials
+```
+
+Similarly:
+
+```text
+get_accounting_connection_refresh_token
+```
+
+exists because decrypted Vault secrets are not exposed through normal application Data API access.
+
+Do not move application orchestration into PostgreSQL solely because it can be implemented there.
+
+For example, QuickBooks token revocation remains application-side:
+
+```text
+get stored refresh token
+        ↓
+call QuickBooks revoke endpoint
+        ↓
+disconnect local connection
+```
+
+This keeps external integration behavior testable and controlled by application code.
+
+## 14. Privileged Operations and Ownership Checks
+
+Values submitted by the browser must be treated as untrusted even when they originate from a Server Component or are bound to a Server Action.
+
+Before calling a privileged service-role operation on an existing entity, verify that the entity belongs to the current CashLens profile.
+
+Example:
+
+```ts
+const { data: connection } = await supabase
+  .schema("cashlens")
+  .from("accounting_connections")
+  .select("id")
+  .eq("id", accountingConnectionId)
+  .eq("profile_id", profile.id)
+  .eq("provider", "QUICKBOOKS")
+  .maybeSingle();
+```
+
+Only after ownership is established should trusted server-side code invoke an elevated operation.
+
+Conceptually:
+
+```text
+browser-supplied ID
+        ↓
+verify current-user ownership
+        ↓
+trusted entity ID
+        ↓
+service-role operation
+```
+
+Using `bind()` or an inline Server Action does not provide authorization.
+
+Transport convenience and authorization are separate concerns.
+
+## 15. Secret Handling
+
+OAuth access tokens, refresh tokens, and other provider credentials must remain server-side.
+
+Do not:
+
+- return raw tokens to Client Components
+- include tokens in redirect URLs
+- log raw token values
+- store raw tokens in normal application tables
+- expose generic Vault secret-reading APIs without a concrete use case
+
+Persist external credentials using Supabase Vault.
+
+Application tables should store Vault secret IDs and operational metadata such as expiry timestamps.
+
+Prefer narrowly scoped secret-access operations.
+
+For example:
+
+```text
+get_accounting_connection_refresh_token
+```
+
+is preferred over a generic operation such as:
+
+```text
+get_decrypted_secret
+```
+
+Add access-token retrieval only when an application use case genuinely requires it.
 
 ## Philosophy
 

@@ -28,6 +28,7 @@ The focus is on pragmatic, freelancer-friendly application development rather th
 - Tailwind CSS
 - Supabase
 - PostgreSQL
+- Supabase Vault
 - Zod
 - React Hook Form
 - pnpm
@@ -69,15 +70,33 @@ Copy the example environment file and add the required values:
 cp .env.example .env.local
 ```
 
-Required variables:
+Required variables currently include:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+NEXT_PUBLIC_SITE_URL=
+
+APP_BASE_URL=
 SUPABASE_SECRET_KEY=
+
+QUICKBOOKS_CLIENT_ID=
+QUICKBOOKS_CLIENT_SECRET=
 ```
 
 `.env.local` is not committed to source control.
+
+Application code accesses configuration through typed environment modules:
+
+```text
+src/lib/env/
+├── clientEnv.ts
+└── serverEnv.ts
+```
+
+Public `NEXT_PUBLIC_*` values use `clientEnv`.
+
+Private server configuration and secrets use `serverEnv`.
 
 ## Supabase Environments
 
@@ -186,6 +205,54 @@ Normal application access should use authenticated Supabase sessions and RLS.
 
 Privileged Supabase service-role access should only be used from trusted server-side code for operations that genuinely require elevated access.
 
+OAuth credentials are stored using Supabase Vault.
+
+Raw QuickBooks access and refresh tokens are not stored in normal CashLens application tables.
+
+Database functions that access Vault or perform privileged accounting-connection operations are restricted to trusted service-role access.
+
+## QuickBooks Integration
+
+CashLens currently supports connecting and disconnecting a QuickBooks company.
+
+The connection flow includes:
+
+```text
+CashLens
+    |
+    v
+QuickBooks OAuth authorization
+    |
+    v
+OAuth callback + state validation
+    |
+    v
+authorization code exchange
+    |
+    v
+QuickBooks CompanyInfo
+    |
+    v
+provider-neutral accounting connection
+    |
+    v
+encrypted token storage in Supabase Vault
+```
+
+The disconnect flow revokes the authorization with QuickBooks before removing local credentials and marking the CashLens connection as disconnected.
+
+QuickBooks-specific integration code lives under:
+
+```text
+src/lib/quickbooks/
+```
+
+Provider-neutral accounting connection operations live under:
+
+```text
+src/lib/accounting-connections/
+```
+
 ## Deployment
 
 CashLens is deployed with Vercel.
@@ -202,6 +269,10 @@ Once CashLens reaches a demo-ready milestone, the deployed application will be s
 
 ## Documentation
 
+### Architecture
+
+- [QuickBooks Connection Lifecycle](docs/architecture/quickbooks-connection-lifecycle.md)
+
 ### Learning journey
 
 CashLens is being built incrementally through practical vertical slices. Each guide documents the decisions, implementation steps, and key learning from that milestone:
@@ -209,6 +280,7 @@ CashLens is being built incrementally through practical vertical slices. Each gu
 1. [Project Foundation](docs/learning/01-project-foundation.md)
 2. [Authentication](docs/learning/02-authentication.md)
 3. [Application User Profile](docs/learning/03a-application-user-profile.md)
+4. [QuickBooks OAuth](docs/learning/03b-quickbooks-oauth.md)
 
 Additional learning guides will be added as the project progresses.
 
@@ -235,6 +307,10 @@ Authentication
         v
 Slice 3a
 Application User Profile
+        |
+        v
+Slice 3b
+QuickBooks OAuth
 ```
 
 CashLens currently has:
@@ -247,11 +323,15 @@ CashLens currently has:
 - generated type-safe Supabase database access
 - authenticated current-user loading
 - editable user profiles with React Hook Form and Zod validation
+- typed client and server environment configuration
+- QuickBooks OAuth authorization
+- OAuth state validation
+- QuickBooks company metadata retrieval
+- provider-neutral accounting connection modelling
+- secure OAuth token storage using Supabase Vault
+- transactional accounting connection persistence
+- connected QuickBooks company UI
+- QuickBooks authorization revocation
+- end-to-end disconnect support
 
-The next milestone is:
-
-```text
-Slice 3b — QuickBooks OAuth
-```
-
-Future slices will build toward QuickBooks integration, financial synchronisation, background processing, scheduled jobs, reliability patterns, and financial dashboards.
+The next milestones will build on the QuickBooks connection foundation with financial data retrieval, token refresh, synchronization, background processing, scheduled jobs, reliability patterns, and financial dashboards.
