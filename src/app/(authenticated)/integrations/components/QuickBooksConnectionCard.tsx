@@ -1,3 +1,5 @@
+import { disconnectQuickBooks } from "../disconnect-quickbooks.action";
+
 type QuickBooksConnectionCardProps = {
   connection: {
     id: string;
@@ -41,9 +43,14 @@ const QuickBooksConnectionCard = ({
 
         <div>
           {isConnected ? (
-            <span className="inline-flex rounded-full bg-green-50 px-3 py-1 text-sm font-medium text-green-700">
-              Connected
-            </span>
+            <form action={disconnectQuickBooks.bind(null, connection.id)}>
+              <button
+                type="submit"
+                className="inline-flex items-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+              >
+                Disconnect
+              </button>
+            </form>
           ) : (
             <a
               href="/api/integrations/quickbooks/connect"

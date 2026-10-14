@@ -156,6 +156,14 @@ export type Database = {
         }
         Returns: string
       }
+      disconnect_accounting_connection: {
+        Args: { p_accounting_connection_id: string }
+        Returns: undefined
+      }
+      get_accounting_connection_refresh_token: {
+        Args: { p_accounting_connection_id: string }
+        Returns: string
+      }
     }
     Enums: {
       accounting_connection_status: "CONNECTED" | "DISCONNECTED"
