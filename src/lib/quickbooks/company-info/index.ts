@@ -1,0 +1,1 @@
+export { getCompanyInfo, type CompanyInfo } from './get-company-info'

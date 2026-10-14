@@ -235,6 +235,227 @@ Even though Next.js loads public and private configuration from the same `.env.*
 
 This keeps configuration strongly typed, preserves the client/server security boundary, and catches missing configuration during development or build rather than at runtime.
 
+## 10. Server Function Arguments
+
+For ordinary backend/server helper functions, prefer a single args/options object over multiple positional parameters when practical.
+
+This is especially useful when a function accepts several arguments.
+
+Example:
+
+```ts
+type GetCompanyInfoArgs = {
+  realmId: string;
+  accessToken: string;
+};
+
+export const getCompanyInfo = async ({
+  realmId,
+  accessToken,
+}: GetCompanyInfoArgs) => {
+  // ...
+};
+```
+
+Prefer:
+
+```ts
+getCompanyInfo({
+  realmId,
+  accessToken,
+});
+```
+
+over:
+
+```ts
+getCompanyInfo(realmId, accessToken);
+```
+
+This improves call-site readability, reduces argument-order mistakes, and makes functions easier to extend later.
+
+Do not force this convention onto framework-defined entrypoints whose function signatures are controlled by Next.js or React.
+
+Examples include:
+
+- Route Handlers such as `GET(request, context)` and `POST(request, context)`
+- Server Actions invoked through forms or React APIs where the framework determines the parameter shape
+
+Framework entrypoints should follow the framework convention.
+
+Internal helper functions called by those entrypoints should follow the args/options object convention where practical.
+
+## 11. QuickBooks Integration Structure
+
+QuickBooks integration code lives under:
+
+```text
+src/lib/quickbooks/
+```
+
+Group QuickBooks operations by resource or capability.
+
+Example:
+
+```text
+src/lib/quickbooks/
+├── oauth/
+│   ├── exchange-authorization-code.ts
+│   ├── refresh-access-token.ts
+│   └── index.ts
+├── company-info/
+│   ├── get-company-info.ts
+│   └── index.ts
+├── invoices/
+│   ├── get-invoice.ts
+│   ├── create-invoice.ts
+│   ├── update-invoice.ts
+│   └── index.ts
+└── reports/
+    ├── get-profit-and-loss.ts
+    ├── get-balance-sheet.ts
+    └── index.ts
+```
+
+Prefer one public QuickBooks operation per file.
+
+QuickBooks library files use kebab-case.
+
+Examples:
+
+```text
+exchange-authorization-code.ts
+get-company-info.ts
+create-invoice.ts
+get-profit-and-loss.ts
+```
+
+Exported TypeScript functions use camelCase.
+
+Example:
+
+```ts
+export const exchangeAuthorizationCode = async () => {
+  // ...
+};
+```
+
+Private helper functions that are only meaningful to one operation may remain in the same file.
+
+Extract helpers only when they are reused or materially improve readability.
+
+The `.action.ts` suffix is reserved for Next.js Server Actions and must not be used for ordinary QuickBooks integration functions.
+
+### QuickBooks Module Barrels
+
+Use `index.ts` barrel files selectively at meaningful QuickBooks resource or capability boundaries.
+
+Examples:
+
+```text
+oauth/
+invoices/
+reports/
+company-info/
+```
+
+The barrel file should expose the public API of that module.
+
+Example:
+
+```ts
+export {
+  exchangeAuthorizationCode,
+  type TokenResponse,
+} from "./exchange-authorization-code";
+```
+
+Consumers should import from the module boundary where practical:
+
+```ts
+import { exchangeAuthorizationCode } from "@/lib/quickbooks/oauth";
+```
+
+rather than using deep imports:
+
+```ts
+import { exchangeAuthorizationCode } from "@/lib/quickbooks/oauth/exchange-authorization-code";
+```
+
+Do not create barrel files everywhere.
+
+Use them only where they provide a clear resource or capability boundary.
+
+### QuickBooks Type Naming
+
+Inside provider-specific QuickBooks modules, prefer concise domain names such as:
+
+```text
+CompanyInfo
+Invoice
+Customer
+Account
+```
+
+The provider context is already communicated by the import path.
+
+Example:
+
+```ts
+import type { Invoice } from "@/lib/quickbooks/invoices";
+```
+
+If a consumer needs equivalent types from multiple providers, use import aliases at the call site.
+
+Example:
+
+```ts
+import type { Invoice as QuickBooksInvoice } from "@/lib/quickbooks/invoices";
+
+import type { Invoice as XeroInvoice } from "@/lib/xero/invoices";
+```
+
+If CashLens later introduces its own provider-neutral domain model, use a separate CashLens-owned type rather than reusing a provider-specific type.
+
+For example:
+
+```text
+QuickBooks Invoice
+        ↓
+        map
+        ↓
+AccountingInvoice
+
+Xero Invoice
+        ↓
+        map
+        ↓
+AccountingInvoice
+```
+
+## 12. External API Response Modelling
+
+When consuming QuickBooks or other external APIs, validate and map only the fields CashLens currently needs.
+
+Do not mirror an entire provider response model unless the application genuinely requires it.
+
+Treat the provider payload as an external contract and the CashLens model as an intentional projection of that contract.
+
+Example:
+
+```ts
+const companyInfoResponseSchema = z.object({
+  CompanyInfo: z.object({
+    CompanyName: z.string().min(1),
+    Country: z.string().optional(),
+  }),
+});
+```
+
+If CashLens later needs additional fields, add them deliberately when there is a concrete use case.
+
+This reduces coupling to the provider and avoids breaking CashLens because of irrelevant changes in unused external fields.
+
 ## Philosophy
 
 CashLens conventions should remain pragmatic.

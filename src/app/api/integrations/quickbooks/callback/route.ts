@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { serverEnv } from "@/lib/env/serverEnv";
 import { exchangeAuthorizationCode } from "@/lib/quickbooks/oauth";
+import { getCompanyInfo } from "@/lib/quickbooks/company-info";
 
 const QUICKBOOKS_CALLBACK_PATH =
   "/api/integrations/quickbooks/callback";
@@ -64,13 +65,20 @@ export async function GET(request: NextRequest) {
     redirectUri,
   );
 
+  const companyInfo = await getCompanyInfo({
+    realmId,
+    config: {
+      accessToken: tokens.access_token,
+      env: "sandbox",
+    },
+  });
+
   return NextResponse.json({
     success: true,
     realmId,
-    accessTokenReceived: Boolean(tokens.access_token),
-    refreshTokenReceived: Boolean(tokens.refresh_token),
-    accessTokenExpiresIn: tokens.expires_in,
-    refreshTokenExpiresIn:
-      tokens.x_refresh_token_expires_in,
+    companyName: companyInfo.CompanyName,
+    country: companyInfo.Country ?? null,
+    accessTokenReceived: true,
+    refreshTokenReceived: true,
   });
 }
