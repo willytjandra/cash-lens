@@ -10,6 +10,24 @@ import { exchangeAuthorizationCode } from "@/lib/quickbooks/oauth";
 const QUICKBOOKS_CALLBACK_PATH =
   "/api/integrations/quickbooks/callback";
 
+const createIntegrationsUrl = ({
+  status,
+  reason,
+}: {
+  status: "connected" | "error";
+  reason?: string;
+}) => {
+  const url = new URL("/integrations", serverEnv.APP_BASE_URL);
+
+  url.searchParams.set("quickbooks", status);
+
+  if (reason) {
+    url.searchParams.set("reason", reason);
+  }
+
+  return url;
+};
+
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
 
@@ -27,35 +45,29 @@ export async function GET(request: NextRequest) {
   cookieStore.delete("quickbooks_oauth_state");
 
   if (!state || !expectedState || state !== expectedState) {
-    return NextResponse.json(
-      {
-        error: "Invalid OAuth state",
-      },
-      {
-        status: 400,
-      },
+    return NextResponse.redirect(
+      createIntegrationsUrl({
+        status: "error",
+        reason: "invalid_state",
+      }),
     );
   }
 
   if (error) {
-    return NextResponse.json(
-      {
-        error,
-      },
-      {
-        status: 400,
-      },
+    return NextResponse.redirect(
+      createIntegrationsUrl({
+        status: "error",
+        reason: "authorization_failed",
+      }),
     );
   }
 
   if (!code || !realmId) {
-    return NextResponse.json(
-      {
-        error: "Missing QuickBooks OAuth callback parameters",
-      },
-      {
-        status: 400,
-      },
+    return NextResponse.redirect(
+      createIntegrationsUrl({
+        status: "error",
+        reason: "invalid_callback",
+      }),
     );
   }
 
@@ -67,50 +79,63 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const redirectUri =
-    `${serverEnv.APP_BASE_URL}${QUICKBOOKS_CALLBACK_PATH}`;
+  try {
+    const redirectUri =
+      `${serverEnv.APP_BASE_URL}${QUICKBOOKS_CALLBACK_PATH}`;
 
-  const tokens = await exchangeAuthorizationCode({
-    code,
-    redirectUri,
-  });
+    const tokens = await exchangeAuthorizationCode({
+      code,
+      redirectUri,
+    });
 
-  const companyInfo = await getCompanyInfo({
-    realmId,
-    config: {
-      accessToken: tokens.access_token,
-      env: "sandbox",
-    },
-  });
+    const companyInfo = await getCompanyInfo({
+      realmId,
+      config: {
+        accessToken: tokens.access_token,
+        env: "sandbox",
+      },
+    });
 
-  const now = Date.now();
+    const now = Date.now();
 
-  await createAccountingConnection({
-    profileId: profile.id,
-    provider: "QUICKBOOKS",
-    externalId: realmId,
-    companyName: companyInfo.CompanyName,
-    country: companyInfo.Country,
-    currency: undefined,
-    scopes: [
-      "com.intuit.quickbooks.accounting",
-    ],
-    credentials: {
-      accessToken: tokens.access_token,
-      refreshToken: tokens.refresh_token,
-      accessTokenExpiresAt: new Date(
-        now + tokens.expires_in * 1000,
-      ),
-      refreshTokenExpiresAt: new Date(
-        now + tokens.x_refresh_token_expires_in * 1000,
-      ),
-    },
-  });
+    await createAccountingConnection({
+      profileId: profile.id,
+      provider: "QUICKBOOKS",
+      externalId: realmId,
+      companyName: companyInfo.CompanyName,
+      country: companyInfo.Country,
+      currency: undefined,
+      scopes: [
+        "com.intuit.quickbooks.accounting",
+      ],
+      credentials: {
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+        accessTokenExpiresAt: new Date(
+          now + tokens.expires_in * 1000,
+        ),
+        refreshTokenExpiresAt: new Date(
+          now + tokens.x_refresh_token_expires_in * 1000,
+        ),
+      },
+    });
 
-  return NextResponse.redirect(
-    new URL(
-      "/integrations?quickbooks=connected",
-      serverEnv.APP_BASE_URL,
-    ),
-  );
+    return NextResponse.redirect(
+      createIntegrationsUrl({
+        status: "connected",
+      }),
+    );
+  } catch (error) {
+    console.error(
+      "Failed to connect QuickBooks",
+      error,
+    );
+
+    return NextResponse.redirect(
+      createIntegrationsUrl({
+        status: "error",
+        reason: "connection_failed",
+      }),
+    );
+  }
 }
